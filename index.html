@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>check the weather</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #f2f5f8;
+        color: #1f2933;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+
+      .card {
+        background: #ffffff;
+        padding: 2.5rem;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+        width: min(90vw, 520px);
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 2.2rem;
+        text-transform: lowercase;
+      }
+
+      p {
+        margin: 0 0 1.5rem;
+        color: #52616b;
+        line-height: 1.5;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.85rem 2.5rem;
+        font-size: 1rem;
+        background: #2563eb;
+        color: #fff;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.24);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+        box-shadow: none;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+      }
+
+      .result {
+        margin-top: 1.75rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        min-height: 2rem;
+      }
+
+      .result.loading {
+        font-weight: 500;
+        color: #4b5563;
+      }
+
+      .note {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>check the weather</h1>
+      <p>Click below to see whether Aix-en-Provence looks dry for tomorrow.</p>
+      <button id="check-weather">Check the weather</button>
+      <div id="result" class="result" aria-live="polite"></div>
+      <div id="note" class="note"></div>
+    </main>
+
+    <script>
+      const button = document.getElementById("check-weather");
+      const result = document.getElementById("result");
+      const note = document.getElementById("note");
+
+      const weatherUrl =
+        "https://api.open-meteo.com/v1/forecast?latitude=43.5297&longitude=5.4474&daily=precipitation_sum,precipitation_probability_max&timezone=Europe%2FParis&forecast_days=2";
+
+      const formatDay = (dateString) =>
+        new Date(dateString).toLocaleDateString("en-GB", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        });
+
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        result.textContent = "Checking tomorrow's forecast...";
+        result.classList.add("loading");
+        note.textContent = "";
+
+        try {
+          const response = await fetch(weatherUrl);
+          if (!response.ok) {
+            throw new Error("Weather service unavailable.");
+          }
+
+          const data = await response.json();
+          const nextDay = data?.daily?.time?.[1];
+          const precipitationSum = data?.daily?.precipitation_sum?.[1];
+          const precipitationChance =
+            data?.daily?.precipitation_probability_max?.[1];
+
+          if (!nextDay) {
+            throw new Error("Forecast data missing.");
+          }
+
+          const rainExpected =
+            Number(precipitationSum) > 0 || Number(precipitationChance) > 0;
+
+          result.textContent = rainExpected ? "Stay home!" : "Let's go!";
+          result.classList.remove("loading");
+          note.textContent = `Forecast for ${formatDay(nextDay)}.`;
+        } catch (error) {
+          result.textContent = "Unable to load the forecast.";
+          result.classList.remove("loading");
+          note.textContent = "Please try again shortly.";
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
